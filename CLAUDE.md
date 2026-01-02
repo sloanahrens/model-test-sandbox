@@ -8,8 +8,7 @@ Test repository for evaluating local MLX models on development tasks.
 sandbox/
 ├── packages/utils/     # TypeScript utilities (pnpm workspace)
 ├── cmd/api/           # Go API server
-├── internal/handler/  # Go HTTP handlers
-└── docs/plans/        # Design documents
+└── internal/handler/  # Go HTTP handlers
 ```
 
 ## Commands
@@ -28,75 +27,132 @@ go build ./cmd/api
 
 ## Test Branches
 
-| Branch | Purpose |
-|--------|---------|
-| `test/f1-simple-commit` | Single file addition (validatePhone) |
-| `test/f5-type-error` | Type error in sleep() return type |
-| `test/q1-multi-file-refactor` | Logger module + retry integration |
-| `test/q5-logic-bug` | Subtle bug in backoff calculation |
+| Branch | Purpose | Test |
+|--------|---------|------|
+| `test/f1-simple-commit` | Single file addition (validatePhone) | Commit message generation |
+| `test/f5-type-error` | Type error in sleep() return type | Type fix accuracy |
+| `test/q1-multi-file-refactor` | Logger module + retry integration | Multi-file understanding |
+| `test/q5-logic-bug` | Subtle bug in backoff calculation | Logic bug detection |
 
 ---
 
 ## MLX Model Evaluation Results
 
-**Date**: 2026-01-01
-**Goal**: Find optimal models for fast and quality tiers to offload development tasks
+**Last Updated**: 2026-01-02
 
-### Models Tested
+### Current Configuration
 
-| Model | Size | Memory | Speed (tok/s) |
-|-------|------|--------|---------------|
-| Llama-3.2-1B-Instruct-4bit | 680M | 0.9 GB | 392 |
-| Llama-3.2-3B-Instruct-4bit | 1.7G | 2.1 GB | 168 |
-| Mistral-7B-Instruct-v0.3-4bit | 3.8G | 4.4 GB | 82 |
-| DeepSeek-Coder-V2-Lite-Instruct-4bit | 8.2G | 9.1 GB | 143 |
+| Tier | Model | Size | Speed | Accuracy |
+|------|-------|------|-------|----------|
+| **Fast** | Qwen2.5-Coder-14B-Instruct-4bit | 7.7 GB | 15-50 tok/s | 100% |
+| **Quality** | Qwen2.5-Coder-32B-Instruct-4bit | 17.2 GB | 6-23 tok/s | 100% |
+
+**Total disk usage**: ~25 GB
 
 ### Benchmark Results
 
-| Test | Task | Llama-1B | Llama-3B | Mistral-7B | DeepSeek |
-|------|------|----------|----------|------------|----------|
-| F1 | Commit message | MARGINAL | MARGINAL | MARGINAL | **PASS** |
-| F2 | Code explanation | PASS | PASS | PASS | PASS |
-| F5 | Fix type error | FAIL | **PASS** | - | MARGINAL |
+| Test | Task | DeepSeek | Qwen-14B | Qwen-32B |
+|------|------|----------|----------|----------|
+| F1 | Commit message | **FAIL** | PASS | PASS |
+| F5 | Fix type error | **FAIL** | PASS | PASS |
+| Q5 | Logic bug detection | MARGINAL | PASS | PASS |
 
-#### Detailed Findings
+### Test Details
 
 **F1 - Commit Message Generation**
 - Prompt: Generate conventional commit for `validatePhone` addition
-- Llama-1B: Wrong format ("Added US phone number validation")
-- Llama-3B: Correct format, wrong type (`fix` instead of `feat`)
-- Mistral-7B: Inverted format (`utils(validators):` instead of `feat(validators):`)
-- DeepSeek: Correct (`feat(utils): add phone number validation function`)
-
-**F2 - Code Explanation**
-- Prompt: Explain the `retry` function in under 50 words
-- All models passed with accurate explanations
-- DeepSeek and Mistral provided more detailed responses
+- DeepSeek: `chore(phone-validation):...` - wrong type
+- Qwen-14B: `feat(validator): add US phone number validation function` - correct
+- Qwen-32B: `feat(validation): add US phone number validation function` - correct
 
 **F5 - Type Error Fix**
 - Prompt: Fix `Promise<string>` return type on function returning void
-- Llama-1B: FAIL - Changed behavior to return string instead of fixing type
-- Llama-3B: PASS - Correctly changed to `Promise<void>`
-- DeepSeek: MARGINAL - Tried to make function return string
+- DeepSeek: Returned code unchanged - FAIL
+- Qwen-14B: Changed to `Promise<void>` - correct
+- Qwen-32B: Changed to `Promise<void>` - correct
 
-### Final Decision (2026-01-01)
+**Q5 - Logic Bug Detection**
+- Prompt: Find bug in backoff calculation (`attempt` vs `attempt-1`)
+- DeepSeek: Confused explanation but correct fix - MARGINAL
+- Qwen-14B: Clear explanation + correct fix - PASS
+- Qwen-32B: Concise explanation + correct fix - PASS
 
-**Single Model: DeepSeek-Coder-V2-Lite-Instruct-4bit**
-- Speed: 143 tok/s
-- Memory: 9.1 GB
-- Use for: Fast local tasks (explanations, commit messages, simple code gen)
+### Speed Measurements
 
-**Quality tasks: Claude (native)**
-- All code review, complex generation, and critical decisions go through Claude
-- No local quality model needed - simpler setup, better results
+| Model | Cold Start | Warm |
+|-------|------------|------|
+| Qwen-14B | 14.9 tok/s | 49.7 tok/s |
+| Qwen-32B | 5.7 tok/s | 22.6 tok/s |
 
-**Deleted:**
-- Llama-3.2-1B, Llama-3.2-3B, Mistral-7B (all removed)
-- All incomplete stubs (removed)
+### Model Routing
 
-### Dogfooding Plan
+```yaml
+fast_tier:
+  model: mlx-community/Qwen2.5-Coder-14B-Instruct-4bit
+  use_for:
+    - commit_messages
+    - type_fixes
+    - code_explanation
+    - bug_detection
+    - documentation
 
-Testing DeepSeek-Coder in real development over coming days:
-- Track success/failure on actual tasks
-- Note where it helps vs where Claude is needed
-- Adjust usage patterns based on experience
+quality_tier:
+  model: mlx-community/Qwen2.5-Coder-32B-Instruct-4bit
+  use_for:
+    - complex_refactoring
+    - architectural_review
+    - when_14B_uncertain
+
+cloud_tier:
+  model: claude-sonnet
+  use_for:
+    - security_review
+    - architecture_decisions
+    - multi-repo_analysis
+```
+
+### Deprecated Models
+
+These models were tested and removed:
+
+| Model | Size | Why Removed |
+|-------|------|-------------|
+| Llama-3.3-70B-Instruct-8bit | 70 GB | Too slow (0.4 tok/s) |
+| DeepSeek-Coder-V2-Lite-Instruct-4bit | 9 GB | Failed F1, F5 tests |
+| Llama-3.2-1B/3B-Instruct-4bit | 0.7-1.7 GB | Unreliable on basic tasks |
+| Mistral-7B-Instruct-v0.3-4bit | 3.8 GB | Slower than alternatives |
+
+---
+
+## Evaluation Framework
+
+### Test Categories
+
+**Fast Tier Tests (F-series)**
+- F1: Commit message generation
+- F2: Code explanation (<100 words)
+- F3: Simple code generation
+- F4: Test generation
+- F5: Type error fix
+
+**Quality Tier Tests (Q-series)**
+- Q1: Multi-file commit message
+- Q2: Complex code explanation
+- Q3: Code gen with edge cases
+- Q4: Integration test generation
+- Q5: Logic bug detection
+
+### Scoring
+
+| Score | Meaning |
+|-------|---------|
+| PASS | Usable as-is or trivial edit |
+| MARGINAL | Mostly right, needs cleanup |
+| FAIL | Wrong, broken, unusable |
+
+### Key Learnings
+
+1. **Code-specific training matters**: Qwen2.5-Coder outperforms general models on commit format and TypeScript semantics
+2. **Size isn't everything**: Qwen-14B (8GB) beats DeepSeek (9GB) despite being smaller
+3. **Warm-up effect**: First inference slower as weights load; subsequent calls 2-3x faster
+4. **Speed vs accuracy**: Qwen-14B offers best balance for most tasks
