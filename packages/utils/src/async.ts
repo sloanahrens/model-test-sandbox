@@ -32,7 +32,7 @@ export async function retry<T>(
         break;
       }
 
-      const waitTime = backoff ? delayMs * Math.pow(2, attempt - 1) : delayMs;
+      const waitTime = backoff ? delayMs * Math.pow(2, attempt) : delayMs;
       await sleep(waitTime);
     }
   }
