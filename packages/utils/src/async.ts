@@ -7,7 +7,7 @@ export interface RetryOptions {
 /**
  * Sleep for a specified number of milliseconds.
  */
-export function sleep(ms: number): Promise<void> {
+export function sleep(ms: number): Promise<string> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
