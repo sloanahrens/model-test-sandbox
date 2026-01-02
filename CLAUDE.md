@@ -42,52 +42,39 @@ go build ./cmd/api
 
 ### Current Configuration
 
-| Tier | Model | Size | Speed | Accuracy |
-|------|-------|------|-------|----------|
-| **Fast** | Qwen2.5-Coder-14B-Instruct-4bit | 7.7 GB | 15-50 tok/s | 100% |
-| **Quality** | Qwen2.5-Coder-32B-Instruct-4bit | 17.2 GB | 6-23 tok/s | 100% |
+| Tier | Model | Size | Speed | Use For |
+|------|-------|------|-------|---------|
+| **Local** | Qwen2.5-Coder-14B-Instruct-4bit | 7.7 GB | 50-56 tok/s | All local tasks |
+| **Cloud** | Claude (Sonnet) | - | ~17s/call | Security, architecture, complex reasoning |
 
-**Total disk usage**: ~25 GB
+**Total disk usage**: ~8 GB (down from 25 GB)
 
-### Benchmark Results
+### Why Single Model?
 
-| Test | Task | DeepSeek | Qwen-14B | Qwen-32B |
-|------|------|----------|----------|----------|
-| F1 | Commit message | **FAIL** | PASS | PASS |
-| F5 | Fix type error | **FAIL** | PASS | PASS |
-| Q5 | Logic bug detection | MARGINAL | PASS | PASS |
+We tested Qwen-14B vs Qwen-32B on sophisticated tasks (2026-01-02):
 
-### Test Details
+| Test | Qwen-14B | Qwen-32B | Winner |
+|------|----------|----------|--------|
+| Multi-bug detection | Found off-by-one | Same | Tie |
+| Race condition analysis | Clear explanation | More confused | **14B** |
+| Rate limiter generation | Correct code | Has off-by-one bug | **14B** |
+| Security vulnerability scan | Found 2/5 issues | Found 3/5 issues | 32B (slight) |
+| Speed | 52-56 tok/s | 26-28 tok/s | **14B** (2x faster) |
 
-**F1 - Commit Message Generation**
-- Prompt: Generate conventional commit for `validatePhone` addition
-- DeepSeek: `chore(phone-validation):...` - wrong type
-- Qwen-14B: `feat(validator): add US phone number validation function` - correct
-- Qwen-32B: `feat(validation): add US phone number validation function` - correct
+**Conclusion**: 32B's extra parameters didn't improve reasoning. 14B was faster and often better.
 
-**F5 - Type Error Fix**
-- Prompt: Fix `Promise<string>` return type on function returning void
-- DeepSeek: Returned code unchanged - FAIL
-- Qwen-14B: Changed to `Promise<void>` - correct
-- Qwen-32B: Changed to `Promise<void>` - correct
+### Benchmark Results (Basic Tests)
 
-**Q5 - Logic Bug Detection**
-- Prompt: Find bug in backoff calculation (`attempt` vs `attempt-1`)
-- DeepSeek: Confused explanation but correct fix - MARGINAL
-- Qwen-14B: Clear explanation + correct fix - PASS
-- Qwen-32B: Concise explanation + correct fix - PASS
-
-### Speed Measurements
-
-| Model | Cold Start | Warm |
-|-------|------------|------|
-| Qwen-14B | 14.9 tok/s | 49.7 tok/s |
-| Qwen-32B | 5.7 tok/s | 22.6 tok/s |
+| Test | Task | DeepSeek | Qwen-14B |
+|------|------|----------|----------|
+| F1 | Commit message | **FAIL** | PASS |
+| F5 | Fix type error | **FAIL** | PASS |
+| Q5 | Logic bug detection | MARGINAL | PASS |
 
 ### Model Routing
 
 ```yaml
-fast_tier:
+local_tier:
   model: mlx-community/Qwen2.5-Coder-14B-Instruct-4bit
   use_for:
     - commit_messages
@@ -95,28 +82,22 @@ fast_tier:
     - code_explanation
     - bug_detection
     - documentation
-
-quality_tier:
-  model: mlx-community/Qwen2.5-Coder-32B-Instruct-4bit
-  use_for:
-    - complex_refactoring
-    - architectural_review
-    - when_14B_uncertain
+    - code_generation
 
 cloud_tier:
   model: claude-sonnet
   use_for:
-    - security_review
+    - security_review (local models miss critical vulns)
     - architecture_decisions
     - multi-repo_analysis
+    - when_uncertain
 ```
 
 ### Deprecated Models
 
-These models were tested and removed:
-
 | Model | Size | Why Removed |
 |-------|------|-------------|
+| Qwen2.5-Coder-32B-Instruct-4bit | 17 GB | No better than 14B, 2x slower |
 | Llama-3.3-70B-Instruct-8bit | 70 GB | Too slow (0.4 tok/s) |
 | DeepSeek-Coder-V2-Lite-Instruct-4bit | 9 GB | Failed F1, F5 tests |
 | Llama-3.2-1B/3B-Instruct-4bit | 0.7-1.7 GB | Unreliable on basic tasks |
@@ -142,6 +123,12 @@ These models were tested and removed:
 - Q4: Integration test generation
 - Q5: Logic bug detection
 
+**Advanced Tests (A-series)** - For model comparison
+- A1: Multi-bug detection (find 2+ interacting bugs)
+- A2: Race condition identification
+- A3: Complex code generation with constraints
+- A4: Security vulnerability detection
+
 ### Scoring
 
 | Score | Meaning |
@@ -152,7 +139,8 @@ These models were tested and removed:
 
 ### Key Learnings
 
-1. **Code-specific training matters**: Qwen2.5-Coder outperforms general models on commit format and TypeScript semantics
-2. **Size isn't everything**: Qwen-14B (8GB) beats DeepSeek (9GB) despite being smaller
-3. **Warm-up effect**: First inference slower as weights load; subsequent calls 2-3x faster
-4. **Speed vs accuracy**: Qwen-14B offers best balance for most tasks
+1. **Bigger isn't always better**: Qwen-14B outperformed Qwen-32B on reasoning tasks
+2. **Code-specific training matters**: Qwen2.5-Coder beats general models on TypeScript
+3. **Speed compounds**: 2x faster means more iterations, better results
+4. **Security needs Claude**: Both local models missed critical vulnerabilities (path traversal)
+5. **Warm-up effect**: First inference slower; subsequent calls 2-3x faster
