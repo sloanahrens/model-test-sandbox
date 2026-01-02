@@ -17,3 +17,11 @@ export function validateUrl(url: string): boolean {
     return false;
   }
 }
+
+/**
+ * Validates a US phone number format.
+ */
+export function validatePhone(phone: string): boolean {
+  const pattern = /^\+?1?[-.\s]?\(?[0-9]{3}\)?[-.\s]?[0-9]{3}[-.\s]?[0-9]{4}$/;
+  return pattern.test(phone);
+}
