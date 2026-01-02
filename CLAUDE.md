@@ -79,44 +79,24 @@ go build ./cmd/api
 - Llama-3B: PASS - Correctly changed to `Promise<void>`
 - DeepSeek: MARGINAL - Tried to make function return string
 
-### Recommendations
+### Final Decision (2026-01-01)
 
-**Fast Tier: Llama-3.2-3B-Instruct-4bit**
-- Reason: Passes error fixes (1B fails), still fast at 168 tok/s
-- Use for: Simple explanations, type fixes, quick code gen
-- Memory: 2.1 GB (acceptable)
+**Single Model: DeepSeek-Coder-V2-Lite-Instruct-4bit**
+- Speed: 143 tok/s
+- Memory: 9.1 GB
+- Use for: Fast local tasks (explanations, commit messages, simple code gen)
 
-**Quality Tier: DeepSeek-Coder-V2-Lite-Instruct-4bit**
-- Reason: Best on commit messages, faster than Mistral (143 vs 82 tok/s)
-- Use for: Commit messages, complex code gen, detailed explanations
-- Memory: 9.1 GB (higher but worth it)
+**Quality tasks: Claude (native)**
+- All code review, complex generation, and critical decisions go through Claude
+- No local quality model needed - simpler setup, better results
 
-**Delete (not needed):**
-- Llama-3.2-1B: Too unreliable on basic tasks
-- Mistral-7B: Slower than DeepSeek with worse commit format
+**Deleted:**
+- Llama-3.2-1B, Llama-3.2-3B, Mistral-7B (all removed)
+- All incomplete stubs (removed)
 
-### Cleanup Commands
+### Dogfooding Plan
 
-```bash
-# Delete unused models
-rm -rf ~/.cache/huggingface/hub/models--mlx-community--Llama-3.2-1B-Instruct-4bit
-rm -rf ~/.cache/huggingface/hub/models--mlx-community--Mistral-7B-Instruct-v0.3-4bit
-
-# Delete incomplete downloads (8K stubs)
-rm -rf ~/.cache/huggingface/hub/models--mlx-community--DeepSeek-R1-Distill-Qwen-32B-4bit
-rm -rf ~/.cache/huggingface/hub/models--mlx-community--DeepSeek-R1-Distill-Qwen-7B-4bit
-rm -rf ~/.cache/huggingface/hub/models--mlx-community--Llama-3.3-70B-Instruct-4bit
-rm -rf ~/.cache/huggingface/hub/models--mlx-community--Meta-Llama-3.1-8B-Instruct-4bit
-rm -rf ~/.cache/huggingface/hub/models--mlx-community--Meta-Llama-3.1-8B-Instruct-8bit
-```
-
-### Final Model Configuration
-
-After cleanup, keep these models:
-
-| Tier | Model | Speed | Use Cases |
-|------|-------|-------|-----------|
-| Fast | Llama-3.2-3B-Instruct-4bit | 168 tok/s | Explanations, simple fixes |
-| Quality | DeepSeek-Coder-V2-Lite-4bit | 143 tok/s | Commits, code gen |
-
-Total disk usage: ~10 GB (down from ~14 GB + stubs)
+Testing DeepSeek-Coder in real development over coming days:
+- Track success/failure on actual tasks
+- Note where it helps vs where Claude is needed
+- Adjust usage patterns based on experience
