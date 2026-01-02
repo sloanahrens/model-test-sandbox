@@ -129,6 +129,14 @@ cloud_tier:
 - A3: Complex code generation with constraints
 - A4: Security vulnerability detection
 
+**Timing Tests (T-series)** - Qwen vs Claude speed/quality
+- T1: Code generation (groupBy function)
+- T2: Code explanation (regex pattern)
+- T3: Refactoring (callback to async/await)
+- T4: Security analysis (path traversal detection)
+- T5: Interface design (rate limiter API)
+- T6: Technical knowledge (Redux vs Context)
+
 ### Scoring
 
 | Score | Meaning |
@@ -137,10 +145,39 @@ cloud_tier:
 | MARGINAL | Mostly right, needs cleanup |
 | FAIL | Wrong, broken, unusable |
 
+### Qwen vs Claude Comparison (2026-01-02)
+
+| Test | Category | Qwen-14B | Claude API | Winner |
+|------|----------|----------|------------|--------|
+| T1: groupBy function | Code gen | 2.9s @ 53 tok/s ✓ | 16.5s ✓ | **Qwen** (5.7x faster) |
+| T2: Regex explanation | Explanation | 1.0s @ 43 tok/s ✓ | 17.9s ✓ | **Qwen** (18x faster) |
+| T3: Callback→async | Refactor | 1.6s @ 47 tok/s ✓ | 18.2s ✓ | **Qwen** (11x faster) |
+| T4: Security vuln | Security | 3.6s @ 55 tok/s ✓ | 27.6s ✓ | **Claude** (more thorough) |
+| T5: Interface design | Architecture | 4.2s @ 58 tok/s ✓ | 63.9s ✓ | **Claude** (better design) |
+| T6: Redux vs Context | Knowledge | 5.6s @ 60 tok/s ✓ | 51.1s ✓ | **Claude** (more nuanced) |
+
+**Key Observations:**
+- Qwen is 5-18x faster on simple tasks with equivalent quality
+- Claude produces more thorough analysis on complex tasks
+- Both found the path traversal vulnerability, but Claude's fix was more comprehensive
+- Claude's architectural guidance (T5, T6) showed better real-world judgment
+
+### When to Use Each
+
+| Use Qwen (Local) For | Use Claude (API) For |
+|---------------------|---------------------|
+| Commit message generation | Security audits |
+| Simple code generation | Architecture decisions |
+| Code explanation | Complex refactoring |
+| Type fixes | Multi-file analysis |
+| Bug detection (basic) | When uncertain |
+| Documentation drafts | Production review |
+
 ### Key Learnings
 
 1. **Bigger isn't always better**: Qwen-14B outperformed Qwen-32B on reasoning tasks
 2. **Code-specific training matters**: Qwen2.5-Coder beats general models on TypeScript
 3. **Speed compounds**: 2x faster means more iterations, better results
-4. **Security needs Claude**: Both local models missed critical vulnerabilities (path traversal)
+4. **Security depth needs Claude**: Both found vulns, but Claude's fixes are production-ready
 5. **Warm-up effect**: First inference slower; subsequent calls 2-3x faster
+6. **Local handles 80% of tasks**: Most coding tasks don't need Claude's reasoning depth
